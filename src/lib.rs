@@ -14,6 +14,7 @@
 // limitations under the License.
 
 use std::*;
+use std::borrow::*;
 
 #[derive(Debug,Clone,Copy)]
 pub struct Invariant<T: ?Sized, F = Box<FnMut(<T as ToOwned>::Owned) -> bool>>
@@ -25,6 +26,11 @@ pub struct Invariant<T: ?Sized, F = Box<FnMut(<T as ToOwned>::Owned) -> bool>>
 impl<T, F> Invariant<T, F>
     where T: ToOwned {
     pub fn into_inner(self) -> T { self.inner }
+}
+
+impl<T: ?Sized, F> Invariant<T, F>
+    where T: ToOwned {
+    pub fn as_inner_ref(&self) -> &T { &self.inner }
 }
 
 impl<T, F> Invariant<T, F>
@@ -41,9 +47,29 @@ impl<T, F> Invariant<T, F>
     }
 }
 
+impl<T, F> Invariant<T, F>
+    where T: ToOwned, F: FnMut(<T as ToOwned>::Owned) -> bool, <T as ToOwned>::Owned: BorrowMut<T> {
+    pub fn with_inner_mut<G, R>(&mut self, op: G) -> Option<R>
+        where G: FnOnce(&mut T) -> R {
+        let mut save: T::Owned = self.inner.to_owned();
+        let res: R = op(&mut self.inner);
+        if (self.check)(self.inner.to_owned()) {
+            Some(res)
+        } else {
+            mem::swap(&mut self.inner, save.borrow_mut());
+            None
+        }
+    }
+}
+
 impl<T: ?Sized, F> Invariant<T, F>
-    where T: ToOwned {
-    pub fn as_inner_ref(&self) -> &T { &self.inner }
+    where T: ToOwned, T::Owned: Clone, F: ToOwned {
+    pub fn to_owned_inner(&self) -> Invariant<T::Owned, F::Owned> {
+        Invariant {
+            inner: self.as_inner_ref().to_owned(),
+            check: self.check.to_owned(),
+        }
+    }
 }
 
 impl<T: ?Sized, F> ops::Deref for Invariant<T, F>
@@ -127,6 +153,15 @@ fmt_trait_impl!(Octal);
 fmt_trait_impl!(LowerHex);
 fmt_trait_impl!(UpperHex);
 fmt_trait_impl!(Pointer);
+
+impl<T: hash::BuildHasher + ?Sized, F> hash::BuildHasher for Invariant<T, F>
+    where T: ToOwned {
+    type Hasher = T::Hasher;
+
+    fn build_hasher(&self) -> Self::Hasher {
+        <T as hash::BuildHasher>::build_hasher(self.as_inner_ref())
+    }
+}
 
 impl<T: hash::Hash + ?Sized, F> hash::Hash for Invariant<T, F>
     where T: ToOwned {
