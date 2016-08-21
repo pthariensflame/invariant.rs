@@ -53,21 +53,6 @@ impl<T: ?Sized, F> ops::Deref for Invariant<T, F>
     fn deref(&self) -> &Self::Target { self.as_inner_ref() }
 }
 
-impl<T: fmt::Display + ?Sized, F> fmt::Display for Invariant<T, F>
-    where T: ToOwned {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        <T as fmt::Display>::fmt(self.as_inner_ref(), formatter)
-    }
-}
-
-impl<T: hash::Hash + ?Sized, F> hash::Hash for Invariant<T, F>
-    where T: ToOwned {
-    fn hash<H>(&self, state: &mut H)
-        where H: hash::Hasher {
-        <T as hash::Hash>::hash(self.as_inner_ref(), state)
-    }
-}
-
 impl<U: ?Sized, T: PartialEq<U> + ?Sized, G, F> PartialEq<Invariant<U, G>> for Invariant<T, F>
     where U: ToOwned, T: ToOwned {
     fn eq(&self, other: &Invariant<U, G>) -> bool {
@@ -80,3 +65,73 @@ impl<U: ?Sized, T: PartialEq<U> + ?Sized, G, F> PartialEq<Invariant<U, G>> for I
 }
 
 impl<T: Eq + ?Sized, F> Eq for Invariant<T, F> where T: ToOwned {}
+
+impl<U: ?Sized, T: PartialOrd<U> + ?Sized, G, F> PartialOrd<Invariant<U, G>> for Invariant<T, F>
+    where U: ToOwned, T: ToOwned {
+    fn partial_cmp(&self, other: &Invariant<U, G>) -> Option<cmp::Ordering> {
+        <T as PartialOrd<U>>::partial_cmp(self.as_inner_ref(), other.as_inner_ref())
+    }
+
+    fn lt(&self, other: &Invariant<U, G>) -> bool {
+        <T as PartialOrd<U>>::lt(self.as_inner_ref(), other.as_inner_ref())
+    }
+
+    fn le(&self, other: &Invariant<U, G>) -> bool {
+        <T as PartialOrd<U>>::le(self.as_inner_ref(), other.as_inner_ref())
+    }
+
+    fn gt(&self, other: &Invariant<U, G>) -> bool {
+        <T as PartialOrd<U>>::gt(self.as_inner_ref(), other.as_inner_ref())
+    }
+
+    fn ge(&self, other: &Invariant<U, G>) -> bool {
+        <T as PartialOrd<U>>::ge(self.as_inner_ref(), other.as_inner_ref())
+    }
+}
+
+impl<T: Ord + ?Sized, F> Ord for Invariant<T, F>
+    where T: ToOwned {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        <T as Ord>::cmp(self.as_inner_ref(), other.as_inner_ref())
+    }
+}
+
+impl<U: ?Sized, T: AsRef<U> + ?Sized, F> AsRef<U> for Invariant<T, F>
+    where T: ToOwned {
+    fn as_ref(&self) -> &U { <T as AsRef<U>>::as_ref(self.as_inner_ref()) }
+}
+
+impl<T: error::Error + ?Sized, F: fmt::Debug + any::Any> error::Error for Invariant<T, F>
+    where T: ToOwned {
+    fn description(&self) -> &str { <T as error::Error>::description(self.as_inner_ref()) }
+
+    fn cause(&self) -> Option<&error::Error> { <T as error::Error>::cause(self.as_inner_ref()) }
+}
+
+macro_rules! fmt_trait_impl {
+    ($t:ident) => {
+        impl<T: fmt::$t + ?Sized, F> fmt::$t for Invariant<T, F>
+            where T: ToOwned {
+            fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                <T as fmt::$t>::fmt(self.as_inner_ref(), formatter)
+            }
+        }
+    }
+}
+
+fmt_trait_impl!(Display);
+fmt_trait_impl!(LowerExp);
+fmt_trait_impl!(UpperExp);
+fmt_trait_impl!(Binary);
+fmt_trait_impl!(Octal);
+fmt_trait_impl!(LowerHex);
+fmt_trait_impl!(UpperHex);
+fmt_trait_impl!(Pointer);
+
+impl<T: hash::Hash + ?Sized, F> hash::Hash for Invariant<T, F>
+    where T: ToOwned {
+    fn hash<H>(&self, state: &mut H)
+        where H: hash::Hasher {
+        <T as hash::Hash>::hash(self.as_inner_ref(), state)
+    }
+}
