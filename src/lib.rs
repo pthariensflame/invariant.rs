@@ -14,7 +14,55 @@
 // limitations under the License.
 
 use std::*;
-use std::borrow::*;
+use std::borrow::BorrowMut;
+
+#[derive(Debug,Hash,PartialEq,Eq,Clone,Copy)]
+pub enum InvariantError<E> {
+    InvariantFailure,
+    OtherError(E),
+}
+
+impl<E> Default for InvariantError<E> {
+    fn default() -> InvariantError<E> {
+        InvariantError::InvariantFailure
+    }
+}
+
+impl<E> Into<Option<E>> for InvariantError<E> {
+    fn into(self) -> Option<E> {
+        match self {
+            InvariantError::InvariantFailure => None,
+            InvariantError::OtherError(e) => Some(e),
+        }
+    }
+}
+
+impl<E: fmt::Display> fmt::Display for InvariantError<E> {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            InvariantError::InvariantFailure => write!(formatter, "Invariant failure"),
+            InvariantError::OtherError(ref e) => <E as fmt::Display>::fmt(e, formatter),
+        }
+    }
+}
+
+impl<E: error::Error> error::Error for InvariantError<E> {
+    fn description(&self) -> &str {
+        match *self {
+            InvariantError::InvariantFailure => "An invariant failed to hold",
+            InvariantError::OtherError(ref e) => {
+                <E as error::Error>::description(e)
+            },
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        match *self {
+            InvariantError::InvariantFailure => None,
+            InvariantError::OtherError(ref e) => <E as error::Error>::cause(e),
+        }
+    }
+}
 
 #[derive(Debug,Clone,Copy)]
 pub struct Invariant<T: ?Sized, F = Box<FnMut(<T as ToOwned>::Owned) -> bool>>
@@ -51,12 +99,18 @@ impl<T, F> Invariant<T, F>
     where T: ToOwned, F: FnMut(<T as ToOwned>::Owned) -> bool, <T as ToOwned>::Owned: BorrowMut<T> {
     pub fn with_inner_mut<G, R>(&mut self, op: G) -> Option<R>
         where G: FnOnce(&mut T) -> R {
-        let mut save: T::Owned = self.inner.to_owned();
-        let res: R = op(&mut self.inner);
-        if (self.check)(self.inner.to_owned()) {
+        self.with_inner_mut_check::<_, R>(|v, _| op(v))
+    }
+
+    pub fn with_inner_mut_check<G, R>(&mut self, op: G) -> Option<R>
+        where G: FnOnce(&mut T, &mut F) -> R {
+        let &mut Invariant { ref mut inner, ref mut check } = self;
+        let mut save: T::Owned = inner.to_owned();
+        let res: R = op(inner, check);
+        if check(inner.to_owned()) {
             Some(res)
         } else {
-            mem::swap(&mut self.inner, save.borrow_mut());
+            mem::swap(inner, save.borrow_mut());
             None
         }
     }
@@ -122,7 +176,7 @@ impl<T: Ord + ?Sized, F> Ord for Invariant<T, F>
     }
 }
 
-impl<U: ?Sized, T: AsRef<U> + ?Sized, F> AsRef<U> for Invariant<T, F>
+impl<U, T: AsRef<U>, F> AsRef<U> for Invariant<T, F>
     where T: ToOwned {
     fn as_ref(&self) -> &U { <T as AsRef<U>>::as_ref(self.as_inner_ref()) }
 }
@@ -168,5 +222,32 @@ impl<T: hash::Hash + ?Sized, F> hash::Hash for Invariant<T, F>
     fn hash<H>(&self, state: &mut H)
         where H: hash::Hasher {
         <T as hash::Hash>::hash(self.as_inner_ref(), state)
+    }
+}
+
+impl<T: IntoIterator, F> IntoIterator for Invariant<T, F>
+    where T: ToOwned {
+    type Item = T::Item;
+
+    type IntoIter = T::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter { <T as IntoIterator>::into_iter(self.into_inner()) }
+}
+
+impl<T: net::ToSocketAddrs, F> net::ToSocketAddrs for Invariant<T, F>
+    where T: ToOwned {
+    type Iter = T::Iter;
+
+    fn to_socket_addrs(&self) -> io::Result<Self::Iter> {
+        <T as net::ToSocketAddrs>::to_socket_addrs(self.as_inner_ref())
+    }
+}
+
+impl<Idx, T: ops::Index<Idx> + ?Sized, F> ops::Index<Idx> for Invariant<T, F>
+    where T: ToOwned {
+    type Output = T::Output;
+
+    fn index(&self, index: Idx) -> &Self::Output {
+        <T as ops::Index<Idx>>::index(self.as_inner_ref(), index)
     }
 }
