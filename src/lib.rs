@@ -17,15 +17,18 @@ use std::*;
 
 #[derive(Debug,Clone,Copy)]
 pub struct Invariant<T: ?Sized, F = Box<FnMut(<T as ToOwned>::Owned) -> bool>>
-    where T: ToOwned, F: FnMut(<T as ToOwned>::Owned) -> bool {
+    where T: ToOwned {
     check: F,
     inner: T,
 }
 
 impl<T, F> Invariant<T, F>
-    where T: ToOwned, F: FnMut(<T as ToOwned>::Owned) -> bool {
+    where T: ToOwned {
     pub fn into_inner(self) -> T { self.inner }
+}
 
+impl<T, F> Invariant<T, F>
+    where T: ToOwned, F: FnMut(<T as ToOwned>::Owned) -> bool {
     pub fn try_from_inner(inner: T, mut check: F) -> Option<Self> {
         if check(inner.to_owned()) {
             Some(Invariant {
@@ -39,27 +42,28 @@ impl<T, F> Invariant<T, F>
 }
 
 impl<T: ?Sized, F> Invariant<T, F>
-    where T: ToOwned, F: FnMut(<T as ToOwned>::Owned) -> bool {
+    where T: ToOwned {
     pub fn as_inner_ref(&self) -> &T { &self.inner }
 }
 
 impl<T: ?Sized, F> ops::Deref for Invariant<T, F>
-    where T: ToOwned, F: FnMut(<T as ToOwned>::Owned) -> bool {
+    where T: ToOwned {
     type Target = T;
 
     fn deref(&self) -> &Self::Target { self.as_inner_ref() }
 }
 
 impl<T: fmt::Display + ?Sized, F> fmt::Display for Invariant<T, F>
-    where T: ToOwned, F: FnMut(<T as ToOwned>::Owned) -> bool {
+    where T: ToOwned {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         <T as fmt::Display>::fmt(self.as_inner_ref(), formatter)
     }
 }
 
 impl<T: hash::Hash + ?Sized, F> hash::Hash for Invariant<T, F>
-    where T: ToOwned, F: FnMut(<T as ToOwned>::Owned) -> bool {
-    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+    where T: ToOwned {
+    fn hash<H>(&self, state: &mut H)
+        where H: hash::Hasher {
         <T as hash::Hash>::hash(self.as_inner_ref(), state)
     }
 }
