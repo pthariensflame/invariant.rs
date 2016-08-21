@@ -67,3 +67,16 @@ impl<T: hash::Hash + ?Sized, F> hash::Hash for Invariant<T, F>
         <T as hash::Hash>::hash(self.as_inner_ref(), state)
     }
 }
+
+impl<U: ?Sized, T: PartialEq<U> + ?Sized, G, F> PartialEq<Invariant<U, G>> for Invariant<T, F>
+    where U: ToOwned, T: ToOwned {
+    fn eq(&self, other: &Invariant<U, G>) -> bool {
+        <T as PartialEq<U>>::eq(self.as_inner_ref(), other.as_inner_ref())
+    }
+
+    fn ne(&self, other: &Invariant<U, G>) -> bool {
+        <T as PartialEq<U>>::ne(self.as_inner_ref(), other.as_inner_ref())
+    }
+}
+
+impl<T: Eq + ?Sized, F> Eq for Invariant<T, F> where T: ToOwned {}
