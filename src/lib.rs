@@ -41,8 +41,13 @@ impl<T, F> Invariant<T, F>
 impl<T: ?Sized, F> Invariant<T, F>
     where T: ToOwned, F: FnMut(<T as ToOwned>::Owned) -> bool {
     pub fn as_inner_ref(&self) -> &T { &self.inner }
+}
 
-    pub fn as_inner_mut(&mut self) -> &mut T { &mut self.inner }
+impl<T: ?Sized, F> ops::Deref for Invariant<T, F>
+    where T: ToOwned, F: FnMut(<T as ToOwned>::Owned) -> bool {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target { self.as_inner_ref() }
 }
 
 impl<T: fmt::Display + ?Sized, F> fmt::Display for Invariant<T, F>
