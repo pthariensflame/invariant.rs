@@ -21,7 +21,7 @@ description = "A library for creating wrapper types that enforce invariants."
 repository = "https://github.com/pthariensflame/invariant.rs"
 readme = "README.md"
 license = "Apache-2.0"
-keywords = ["wrapper", "wrapper-type", "invariant"]
+keywords = ["wrapper", "wrapper-type", "newtype", "invariant"]
 
 [lib]
 name = "invariant"

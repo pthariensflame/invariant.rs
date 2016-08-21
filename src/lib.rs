@@ -23,9 +23,7 @@ pub enum InvariantError<E> {
 }
 
 impl<E> Default for InvariantError<E> {
-    fn default() -> InvariantError<E> {
-        InvariantError::InvariantFailure
-    }
+    fn default() -> InvariantError<E> { InvariantError::InvariantFailure }
 }
 
 impl<E> Into<Option<E>> for InvariantError<E> {
