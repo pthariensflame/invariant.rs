@@ -16,52 +16,6 @@
 use std::{fmt, hash, ops, net, io, error, any, cmp, mem};
 use std::borrow::BorrowMut;
 
-#[derive(Debug,Hash,PartialEq,Eq,Clone,Copy)]
-pub enum InvariantError<E> {
-    InvariantFailure,
-    OtherError(E),
-}
-
-impl<E> Default for InvariantError<E> {
-    fn default() -> InvariantError<E> { InvariantError::InvariantFailure }
-}
-
-impl<E> Into<Option<E>> for InvariantError<E> {
-    fn into(self) -> Option<E> {
-        match self {
-            InvariantError::InvariantFailure => None,
-            InvariantError::OtherError(e) => Some(e),
-        }
-    }
-}
-
-impl<E: fmt::Display> fmt::Display for InvariantError<E> {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            InvariantError::InvariantFailure => write!(formatter, "Invariant failure"),
-            InvariantError::OtherError(ref e) => <E as fmt::Display>::fmt(e, formatter),
-        }
-    }
-}
-
-impl<E: error::Error> error::Error for InvariantError<E> {
-    fn description(&self) -> &str {
-        match *self {
-            InvariantError::InvariantFailure => "An invariant failed to hold",
-            InvariantError::OtherError(ref e) => {
-                <E as error::Error>::description(e)
-            },
-        }
-    }
-
-    fn cause(&self) -> Option<&error::Error> {
-        match *self {
-            InvariantError::InvariantFailure => None,
-            InvariantError::OtherError(ref e) => <E as error::Error>::cause(e),
-        }
-    }
-}
-
 #[derive(Debug,Clone,Copy)]
 pub struct Invariant<T: ?Sized, F = Box<FnMut(<T as ToOwned>::Owned) -> bool>>
     where T: ToOwned {
