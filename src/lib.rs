@@ -209,3 +209,9 @@ mod backtrace_impls;
 
 #[cfg(feature = "backtrace")]
 pub use backtrace_impls::*;
+
+#[cfg(feature = "bindgen")]
+mod bindgen_impls;
+
+#[cfg(feature = "bindgen")]
+pub use bindgen_impls::*;
