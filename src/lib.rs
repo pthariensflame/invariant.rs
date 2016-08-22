@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::*;
+use std::{fmt, hash, ops, net, io, error, any, cmp, mem};
 use std::borrow::BorrowMut;
 
 #[derive(Debug,Hash,PartialEq,Eq,Clone,Copy)]
@@ -249,3 +249,9 @@ impl<Idx, T: ops::Index<Idx> + ?Sized, F> ops::Index<Idx> for Invariant<T, F>
         <T as ops::Index<Idx>>::index(self.as_inner_ref(), index)
     }
 }
+
+#[cfg(feature = "backtrace")]
+mod backtrace_impls;
+
+#[cfg(feature = "backtrace")]
+pub use backtrace_impls::*;

@@ -15,7 +15,7 @@
 
 [package]
 name = "invariant"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Alexander Ronald Altman <alexanderaltman@me.com>"]
 description = "A library for creating wrapper types that enforce invariants."
 repository = "https://github.com/pthariensflame/invariant.rs"
@@ -28,6 +28,9 @@ name = "invariant"
 path = "src/lib.rs"
 
 [dependencies]
+backtrace = {version = "~0.2.3", optional = true}
+bindgen = {version = "~0.19.0", optional = true}
 
 [features]
-all-dependencies = []
+default = []
+all-dependencies = ["backtrace", "bindgen"]
